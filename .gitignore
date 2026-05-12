@@ -1,0 +1,22 @@
+# Logs
+*.log
+training_history.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+venv/
+.env
+
+# Models and Checkpoints
+*.pt
+*.pth
+checkpoints/
+models/*.pt
+
+# OS
+.DS_Store
