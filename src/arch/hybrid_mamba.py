@@ -125,8 +125,14 @@ class HybridMambaMoE(nn.Module):
         self.norm = nn.LayerNorm(d_model)
         self.output = nn.Linear(d_model, vocab_size, bias=False)
         
-    def forward(self, input_ids):
-        x = self.embedding(input_ids)
+    def forward(self, input_ids=None, inputs_embeds=None, return_latents=False):
+        if inputs_embeds is not None:
+            x = inputs_embeds
+        elif input_ids is not None:
+            x = self.embedding(input_ids)
+        else:
+            raise ValueError("You must specify either input_ids or inputs_embeds")
+            
         all_gate_logits = []
         for layer in self.layers:
             x, gate_logits = layer(x)
@@ -136,12 +142,41 @@ class HybridMambaMoE(nn.Module):
         aux_loss = 0.0
         for gate_logits in all_gate_logits:
             probs = F.softmax(gate_logits, dim=-1)
-            # fraction of tokens routed to each expert
             f = probs.mean(dim=0)
-            # if perfectly balanced, f = 1/N. Minimizing f.pow(2).sum() encourages balance
             aux_loss += f.pow(2).sum() * len(f)
             
-        return self.output(self.norm(x)), aux_loss
+        x_norm = self.norm(x)
+        if return_latents:
+            return x_norm, aux_loss
+        return self.output(x_norm), aux_loss
+
+    @torch.no_grad()
+    def generate(self, input_ids, max_new_tokens=50, temperature=1.0, top_p=0.9, do_sample=True, pad_token_id=None):
+        self.eval()
+        for _ in range(max_new_tokens):
+            logits, _ = self(input_ids)
+            next_token_logits = logits[:, -1, :] / (temperature + 1e-8)
+            
+            if do_sample:
+                # Simple top-p sampling
+                sorted_logits, sorted_indices = torch.sort(next_token_logits, descending=True)
+                cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+                
+                sorted_indices_to_remove = cumulative_probs > top_p
+                sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+                sorted_indices_to_remove[..., 0] = 0
+                
+                indices_to_remove = sorted_indices_to_remove.scatter(1, sorted_indices, sorted_indices_to_remove)
+                next_token_logits[indices_to_remove] = float('-inf')
+                probs = F.softmax(next_token_logits, dim=-1)
+                next_token = torch.multinomial(probs, num_samples=1)
+            else:
+                next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+                
+            input_ids = torch.cat([input_ids, next_token], dim=1)
+            if pad_token_id is not None and next_token.item() == pad_token_id:
+                break
+        return input_ids
 
 if __name__ == "__main__":
     model = HybridMambaMoE(vocab_size=1000, d_model=128, n_layers=4)

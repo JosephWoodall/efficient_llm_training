@@ -1,5 +1,5 @@
 import torch
-from datasets import load_dataset, interleave_datasets
+from datasets import load_dataset
 from transformers import AutoTokenizer
 from torch.utils.data import IterableDataset, DataLoader
 
@@ -9,17 +9,13 @@ class TokenizedStreamer(IterableDataset):
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
             
-        # Mix web text (grammar/reasoning) with Wikipedia (facts)
-        ds_web = load_dataset("Skylion007/openwebtext", split=split, streaming=True)
-        ds_wiki = load_dataset("wikimedia/wikipedia", "20231101.en", split=split, streaming=True)
-        
-        # Interleave: roughly 50% web, 50% wiki
-        self.dataset = interleave_datasets([ds_web, ds_wiki], probabilities=[0.5, 0.5])
+        # Use an instruction tuning dataset for advanced reasoning
+        self.dataset = load_dataset("tatsu-lab/alpaca", split=split, streaming=True)
         self.max_length = max_length
 
     def __iter__(self):
         for example in self.dataset:
-            text = example.get("text", example.get("content", ""))
+            text = example.get("text", "")
             if not text:
                 continue
                 
@@ -41,7 +37,7 @@ def get_dataloader(tokenizer_name="gpt2", batch_size=4, max_length=512):
     return DataLoader(dataset, batch_size=batch_size)
 
 if __name__ == "__main__":
-    print("Testing mixed data streamer...")
+    print("Testing instruction data streamer...")
     loader = get_dataloader(batch_size=2)
     for i, batch in enumerate(loader):
         print(f"Batch {i}: input_ids shape {batch['input_ids'].shape}")

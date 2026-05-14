@@ -50,7 +50,7 @@ def train():
     num_heads = 8
     attn_every = 4 # Attention every 4th layer
     batch_size = 1 
-    grad_accum_steps = 4 
+    grad_accum_steps = 32 
     lr = 3e-4 # Back to standard LR for non-hypernet
     vocab_size = 50257
     max_steps = 100000

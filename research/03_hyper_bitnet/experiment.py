@@ -3,7 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from tqdm import tqdm
+import os
 from src.data.streamer import get_dataloader
+from src.training.logger import setup_logger
+
+# Set up logging to the current method directory
+METHOD_DIR = os.path.dirname(os.path.abspath(__file__))
+logger = setup_logger("Hyper-BitNet", METHOD_DIR)
 
 # --- ARCHITECTURE: Hyper-BitNet ---
 # A small "Seed" model generates the 1.58-bit weights for a larger virtual model.
@@ -57,7 +63,7 @@ def run_experiment():
     criterion = nn.CrossEntropyLoss()
     loader = get_dataloader(batch_size=4)
     
-    print("Research Idea: Hyper-BitNet (Weight Generation) Training...")
+    logger.info("Research Idea: Hyper-BitNet (Weight Generation) Training...")
     for i, batch in enumerate(tqdm(loader)):
         ids = batch["input_ids"]
         out = model(ids[:, :-1])
@@ -66,7 +72,7 @@ def run_experiment():
         loss.backward()
         optimizer.step()
         if i >= 10: break
-    print(f"Finished. Final Loss: {loss.item():.4f}")
+    logger.info(f"Finished. Final Loss: {loss.item():.4f}")
 
 if __name__ == "__main__":
     run_experiment()

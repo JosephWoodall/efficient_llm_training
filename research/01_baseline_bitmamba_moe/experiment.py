@@ -4,7 +4,13 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import os
 from src.data.streamer import get_dataloader
+from src.training.logger import setup_logger
+
+# Set up logging to the current method directory
+METHOD_DIR = os.path.dirname(os.path.abspath(__file__))
+logger = setup_logger("Baseline-BitMamba-MoE", METHOD_DIR)
 
 # --- ARCHITECTURE ---
 
@@ -104,8 +110,9 @@ def run_experiment():
     optimizer = optim.AdamW(model.parameters(), lr=1e-3)
     criterion = nn.CrossEntropyLoss()
     
-    print("Baseline BitMamba-MoE Training...")
-    for i, batch in enumerate(tqdm(loader)):
+    logger.info("Baseline BitMamba-MoE Training...")
+    last_loss = 0
+    for i, batch in enumerate(tqdm(loader, desc="Training")):
         ids = batch["input_ids"].to(device)
         out = model(ids[:, :-1])
         loss = criterion(out.reshape(-1, vocab_size), ids[:, 1:].reshape(-1))
@@ -113,8 +120,13 @@ def run_experiment():
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
+        
+        last_loss = loss.item()
+        if i % 5 == 0:
+            logger.info(f"Step {i} | Loss: {last_loss:.4f}")
+            
         if i >= 10: break
-    print(f"Finished. Final Loss: {loss.item():.4f}")
+    logger.info(f"Finished. Final Loss: {last_loss:.4f}")
 
 if __name__ == "__main__":
     run_experiment()

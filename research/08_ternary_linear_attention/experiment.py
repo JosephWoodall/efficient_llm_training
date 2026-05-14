@@ -3,7 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from tqdm import tqdm
+import os
 from src.data.streamer import get_dataloader
+from src.training.logger import setup_logger
+
+# Set up logging to the current method directory
+METHOD_DIR = os.path.dirname(os.path.abspath(__file__))
+logger = setup_logger("Ternary-Linear-Attention", METHOD_DIR)
 
 # --- ARCHITECTURE: Ternary Linear Attention ---
 # $O(N)$ attention with BitNet b1.58 weights.
@@ -61,16 +67,20 @@ def run_experiment():
     criterion = nn.CrossEntropyLoss()
     loader = get_dataloader(batch_size=4)
     
-    print("Research Idea: Ternary Linear Attention Training...")
-    for i, batch in enumerate(tqdm(loader)):
+    logger.info("Research Idea: Ternary Linear Attention Training...")
+    last_loss = 0
+    for i, batch in enumerate(tqdm(loader, desc="Training")):
         ids = batch["input_ids"]
         out = model(ids[:, :-1])
         loss = criterion(out.reshape(-1, vocab_size), ids[:, 1:].reshape(-1))
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        last_loss = loss.item()
+        if i % 5 == 0:
+            logger.info(f"Step {i} | Loss: {last_loss:.4f}")
         if i >= 10: break
-    print(f"Finished. Final Loss: {loss.item():.4f}")
+    logger.info(f"Finished. Final Loss: {last_loss:.4f}")
 
 if __name__ == "__main__":
     run_experiment()
