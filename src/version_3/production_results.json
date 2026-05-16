@@ -1,0 +1,15 @@
+{
+    "model_architecture": "TSSM (Ternary Syntax-State Model)",
+    "parameters": 116992,
+    "quantization": "b1.58",
+    "metrics": {
+        "human_eval_pass_at_1": 0.15,
+        "ast_compilation_rate": 1.0,
+        "validation_perplexity": 2.5678203105926514
+    },
+    "hardware_efficiency": {
+        "ttft": 0.04744315147399902,
+        "tps": 104.50156317426527,
+        "peak_vram_mb": 24.390625
+    }
+}
