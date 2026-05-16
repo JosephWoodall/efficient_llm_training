@@ -92,7 +92,11 @@ def train_production_tier(max_steps=None):
         total_loss += loss.item()
         
         if (step + 1) % 10 == 0:
-            print(f"Step {step+1}/{max_steps} - Avg Loss: {total_loss/10:.4f}")
+            avg_loss = total_loss / 10
+            print(f"Step {step+1}/{max_steps} - Avg Loss: {avg_loss:.4f}")
+            if avg_loss < 1.0:
+                print("Early stopping triggered: Avg Loss dropped below 1.0")
+                break
             total_loss = 0
             
     print("Training complete. Saving hybrid checkpoint...")
