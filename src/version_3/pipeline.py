@@ -54,4 +54,4 @@ def build_hybrid_dataset(shard_dir="src/version_3/hybrid_shards", target_size_by
     print(f"Hybrid ingestion complete. Processed {valid_files_processed} files.")
 
 if __name__ == "__main__":
-    build_hybrid_dataset(max_files=100)
+    build_hybrid_dataset(max_files=None)

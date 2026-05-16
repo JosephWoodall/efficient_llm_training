@@ -51,13 +51,13 @@ def train_staging_tier():
     print("Simulating Hybrid Staging Execution: Measuring throughput and gate triggers...")
     print("Staging Tier: Benchmarking complete.")
 
-def train_production_tier(max_steps=100):
+def train_production_tier(max_steps=None):
     print("=== Hybrid Phase: Local Production Training ===")
     import json
     import time
     
     tokenizer = HybridTokenizer()
-    model = HybridTSSM(vocab_size=tokenizer.vocab_size, syntax_vocab_size=tokenizer.syntax_vocab_size, d_model=128, n_layers=2)
+    model = HybridTSSM(vocab_size=tokenizer.vocab_size, syntax_vocab_size=tokenizer.syntax_vocab_size, d_model=1024, n_layers=12)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     
@@ -75,7 +75,7 @@ def train_production_tier(max_steps=100):
     
     print("Starting continuous training on hybrid BPE data...")
     for step, batch in enumerate(dataloader):
-        if step >= max_steps:
+        if max_steps is not None and step >= max_steps:
             break
             
         batch = batch.to(device).long()

@@ -7,7 +7,7 @@ def main():
     print("=== Hybrid TSSM Interactive CLI ===")
     
     tokenizer = HybridTokenizer()
-    model = HybridTSSM(vocab_size=tokenizer.vocab_size, syntax_vocab_size=tokenizer.syntax_vocab_size, d_model=128, n_layers=2)
+    model = HybridTSSM(vocab_size=tokenizer.vocab_size, syntax_vocab_size=tokenizer.syntax_vocab_size, d_model=1024, n_layers=12)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     
