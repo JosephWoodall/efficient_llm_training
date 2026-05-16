@@ -1,0 +1,10 @@
+{
+    "model_architecture": "Hybrid TSSM (Dual-Head BPE + AST Gate)",
+    "parameters": 12980608,
+    "quantization": "b1.58",
+    "metrics": {
+        "validation_perplexity": 59.09827423095703,
+        "text_support": true,
+        "ast_gating_support": true
+    }
+}
