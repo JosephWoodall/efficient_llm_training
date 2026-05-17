@@ -93,7 +93,8 @@ def train_production_tier(max_steps=None):
         
         if (step + 1) % 10 == 0:
             avg_loss = total_loss / 10
-            print(f"Step {step+1}/{max_steps} - Avg Loss: {avg_loss:.4f}")
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"Step {step+1}/{max_steps} - Avg Loss: {avg_loss:.4f} - Timestamp: {current_time}")
             if avg_loss < 1.0:
                 print("Early stopping triggered: Avg Loss dropped below 1.0")
                 break

@@ -1,5 +1,6 @@
 import os
 import torch
+import itertools
 from datasets import load_dataset
 from safetensors.torch import save_file
 from src.version_3.tokenizer import HybridTokenizer
@@ -7,8 +8,10 @@ from src.version_3.tokenizer import HybridTokenizer
 def build_hybrid_dataset(shard_dir="src/version_3/hybrid_shards", target_size_bytes=50 * 1024 * 1024, max_files=None):
     os.makedirs(shard_dir, exist_ok=True)
     
+    print("Loading code and conversational datasets...")
     try:
-        ds = load_dataset("code_search_net", "python", split="train", streaming=True)
+        ds_code = load_dataset("code_search_net", "python", split="train", streaming=True)
+        ds_chat = load_dataset("yahma/alpaca-cleaned", split="train", streaming=True)
     except Exception as e:
         print(f"Dataset loading error: {e}")
         return
@@ -21,19 +24,36 @@ def build_hybrid_dataset(shard_dir="src/version_3/hybrid_shards", target_size_by
     print("Starting hybrid data ingestion...")
     valid_files_processed = 0
     
-    for idx, item in enumerate(ds):
+    # Interleave the two datasets
+    # alpaca format: instruction, input, output
+    for idx, (code_item, chat_item) in enumerate(zip(ds_code, ds_chat)):
         if max_files and valid_files_processed >= max_files:
             break
             
-        code = item.get("content", item.get("whole_func_string", item.get("code", "")))
-        if not code:
-            continue
+        # Process Code
+        code = code_item.get("content", code_item.get("whole_func_string", code_item.get("code", "")))
+        if code:
+            bpe_ids = tokenizer.encode_text(code)
+            buffer_bpe.extend(bpe_ids)
+            current_size += len(bpe_ids) * 4
+            valid_files_processed += 1
             
-        bpe_ids = tokenizer.encode_text(code)
-        buffer_bpe.extend(bpe_ids)
-        current_size += len(bpe_ids) * 4 # 4 bytes per int32
+        # Process Chat / Instruction
+        instruction = chat_item.get("instruction", "")
+        chat_input = chat_item.get("input", "")
+        output = chat_item.get("output", "")
         
-        valid_files_processed += 1
+        if instruction and output:
+            prompt = instruction
+            if chat_input:
+                prompt += f"\n{chat_input}"
+            
+            # Format into conversational template
+            chat_text = f"<|user|>\n{prompt}\n<|assistant|>\n{output}\n"
+            bpe_ids_chat = tokenizer.encode_text(chat_text)
+            buffer_bpe.extend(bpe_ids_chat)
+            current_size += len(bpe_ids_chat) * 4
+            valid_files_processed += 1
         
         if current_size >= target_size_bytes:
             save_path = os.path.join(shard_dir, f"shard_{current_shard}.safetensors")
@@ -51,7 +71,7 @@ def build_hybrid_dataset(shard_dir="src/version_3/hybrid_shards", target_size_by
         save_file({"bpe": tensor}, save_path)
         print(f"Saved {save_path} (Final)")
         
-    print(f"Hybrid ingestion complete. Processed {valid_files_processed} files.")
+    print(f"Hybrid ingestion complete. Processed {valid_files_processed} items.")
 
 if __name__ == "__main__":
     build_hybrid_dataset(max_files=None)
