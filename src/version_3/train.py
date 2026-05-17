@@ -55,6 +55,7 @@ def train_production_tier(max_steps=None):
     print("=== Hybrid Phase: Local Production Training ===")
     import json
     import time
+    from datetime import datetime
     
     tokenizer = HybridTokenizer()
     model = HybridTSSM(vocab_size=tokenizer.vocab_size, syntax_vocab_size=tokenizer.syntax_vocab_size, d_model=1024, n_layers=12)
