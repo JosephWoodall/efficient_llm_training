@@ -26,34 +26,36 @@ def build_hybrid_dataset(shard_dir="src/version_3/hybrid_shards", target_size_by
     
     # Interleave the two datasets
     # alpaca format: instruction, input, output
-    for idx, (code_item, chat_item) in enumerate(zip(ds_code, ds_chat)):
+    for idx, (code_item, chat_item) in enumerate(itertools.zip_longest(ds_code, ds_chat, fillvalue=None)):
         if max_files and valid_files_processed >= max_files:
             break
             
         # Process Code
-        code = code_item.get("content", code_item.get("whole_func_string", code_item.get("code", "")))
-        if code:
-            bpe_ids = tokenizer.encode_text(code)
-            buffer_bpe.extend(bpe_ids)
-            current_size += len(bpe_ids) * 4
-            valid_files_processed += 1
+        if code_item:
+            code = code_item.get("content", code_item.get("whole_func_string", code_item.get("code", "")))
+            if code:
+                bpe_ids = tokenizer.encode_text(code)
+                buffer_bpe.extend(bpe_ids)
+                current_size += len(bpe_ids) * 4
+                valid_files_processed += 1
             
         # Process Chat / Instruction
-        instruction = chat_item.get("instruction", "")
-        chat_input = chat_item.get("input", "")
-        output = chat_item.get("output", "")
-        
-        if instruction and output:
-            prompt = instruction
-            if chat_input:
-                prompt += f"\n{chat_input}"
+        if chat_item:
+            instruction = chat_item.get("instruction", "")
+            chat_input = chat_item.get("input", "")
+            output = chat_item.get("output", "")
             
-            # Format into conversational template
-            chat_text = f"<|user|>\n{prompt}\n<|assistant|>\n{output}\n"
-            bpe_ids_chat = tokenizer.encode_text(chat_text)
-            buffer_bpe.extend(bpe_ids_chat)
-            current_size += len(bpe_ids_chat) * 4
-            valid_files_processed += 1
+            if instruction and output:
+                prompt = instruction
+                if chat_input:
+                    prompt += f"\n{chat_input}"
+                
+                # Format into conversational template
+                chat_text = f"<|user|>\n{prompt}\n<|assistant|>\n{output}\n"
+                bpe_ids_chat = tokenizer.encode_text(chat_text)
+                buffer_bpe.extend(bpe_ids_chat)
+                current_size += len(bpe_ids_chat) * 4
+                valid_files_processed += 1
         
         if current_size >= target_size_bytes:
             save_path = os.path.join(shard_dir, f"shard_{current_shard}.safetensors")

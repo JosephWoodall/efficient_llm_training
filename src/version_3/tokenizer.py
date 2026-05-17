@@ -29,7 +29,8 @@ class HybridTokenizer:
         self.syntax_vocab_size = len(self.syntax_vocab)
         
     def encode_text(self, text: str):
-        return self.bpe.encode(text)
+        # Truncate to max sequence length to prevent GPT2Tokenizer errors
+        return self.bpe.encode(text, truncation=True, max_length=1024)
         
     def decode_text(self, ids):
         return self.bpe.decode(ids)
