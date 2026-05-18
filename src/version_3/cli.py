@@ -34,12 +34,14 @@ def main():
             if not user_input.strip():
                 continue
                 
-            # Parse user input as BPE
-            bpe_ids = tokenizer.encode_text(user_input)
+            # Format user input into the chat template used during training
+            chat_prompt = f"<|user|>\n{user_input}\n<|assistant|>\n"
+            bpe_ids = tokenizer.encode_text(chat_prompt)
             input_tensor = torch.tensor([bpe_ids], device=device).long()
             
             with torch.no_grad():
-                generated_tensor = model.generate(input_tensor, max_length=20, tokenizer=tokenizer)
+                # Increase max_length so it can generate full sentences and code blocks
+                generated_tensor = model.generate(input_tensor, max_length=150, tokenizer=tokenizer)
                 
             generated_ids = generated_tensor[0].cpu().tolist()
             new_ids = generated_ids[len(bpe_ids):]
